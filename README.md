@@ -17,8 +17,6 @@ In this final project, you will implement the missing parts in the schematic. To
   * Linux: make is installed by default on most Linux distros
   * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
   * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* Git LFS
-  * Weight files are handled using [LFS](https://git-lfs.github.com/)
 * OpenCV >= 4.1
   * This must be compiled from source using the `-D OPENCV_ENABLE_NONFREE=ON` cmake flag for testing the SIFT and SURF detectors.
   * The OpenCV 4.1.0 source code can be found [here](https://github.com/opencv/opencv/tree/4.1.0)
@@ -26,6 +24,26 @@ In this final project, you will implement the missing parts in the schematic. To
   * Linux: gcc / g++ is installed by default on most Linux distros
   * Mac: same deal as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
   * Windows: recommend using [MinGW](http://www.mingw.org/)
+## Performance Evaluation 1
+* The time to collision gives a negative value when the distance to collision increases in the current frame relative to the previous frame. which can be seen in the below graph.
+<img src="images/graphs/ttcLidar_stepsize_1.png" width="414" height="414" />
+* there is a sharp increase in the time to collision from the LiDAR data which due to noise in the LiDAR data which can be seen in the below image,
+<img src="images/graphs/lidar_1.png" width="779" height="414" />
+  and the sharpe increase in the time to collision can be seen in the below graph.
+<img src="images/graphs/lidar_1_1.png" width="414" height="414" />
+* there are also some cases where there is no LiDAR data inside the ROI of the frame, which leads to skipping to next frame to obtain the time to collision.
+* For the step size 1, there is sharpe change in the time to collision value due to less change in the data, so increasing the step size give a more reliable output value.
+
+## Performance Evaluation 2
+* The comparison of detector/descriptor combinations are made with the LiDar data to estimate the time to collision. Below are the graph comparisions.
+<img src="images/graphs/ttcLidar_vs_AKAZE" width="414" height="414" />
+<img src="images/graphs/ttcLidar_vs_BRISK" width="414" height="414" />
+<img src="images/graphs/ttcLidar_vs_FREAK" width="414" height="414" />
+<img src="images/graphs/ttcLidar_vs_ORB" width="414" height="414" />
+<img src="images/graphs/ttcLidar_vs_SIFT" width="414" height="414" />
+* From the above the graphs, it is clear that the performance of the SIFT detector/descriptor is the best of all.
+* There are cases of descriptor mismatches which leads massive differences between time to collosion computed using LiDAR and camera. This shows that camera is less relaible to perform time to collision.
+
 
 ## Basic Build Instructions
 
