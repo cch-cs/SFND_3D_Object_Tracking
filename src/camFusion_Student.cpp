@@ -134,6 +134,27 @@ void show3DObjects(std::vector<BoundingBox> &boundingBoxes, cv::Size worldSize, 
 void clusterKptMatchesWithROI(BoundingBox &boundingBox, std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPoint> &kptsCurr, std::vector<cv::DMatch> &kptMatches)
 {
     // ...
+  double meandistance{0};
+  double distance{0};
+  std::vector<float> currkeypoint(2);
+  for (auto match = kptMatches.begin(); match != kptMatches.end(); match++){
+  	meandistance += cv::norm(kptsPrev.at(match->queryIdx).pt - kptsCurr.at(match->trainIdx).pt);
+  }
+  meandistance /= kptMatches.size();
+  //std::cout << "meandistance " << meandistance << std::endl;
+  for (auto match = kptMatches.begin(); match != kptMatches.end(); match++){
+    currkeypoint[0] = kptsCurr[match->trainIdx].pt.x;
+    currkeypoint[1] = kptsCurr[match->trainIdx].pt.y;
+    distance = cv::norm(kptsPrev.at(match->queryIdx).pt - kptsCurr.at(match->trainIdx).pt);
+    if (currkeypoint[0] > boundingBox.roi.x && currkeypoint[0] < boundingBox.roi.x+boundingBox.roi.width){
+      if (currkeypoint[1] > boundingBox.roi.y && currkeypoint[1] < boundingBox.roi.y+boundingBox.roi.height){
+        distance = cv::norm(kptsPrev.at(match->queryIdx).pt - kptsCurr.at(match->trainIdx).pt);
+        if (distance <= meandistance){
+      		boundingBox.kptMatches.emplace_back(*match);
+        }
+      }
+    }
+  }
 }
 
 
@@ -142,6 +163,52 @@ void computeTTCCamera(std::vector<cv::KeyPoint> &kptsPrev, std::vector<cv::KeyPo
                       std::vector<cv::DMatch> kptMatches, double frameRate, double &TTC, cv::Mat *visImg)
 {
     // ...
+  double distRatios{0}; // stores the distance ratios for all keypoints between curr. and prev. frame
+  size_t count{0};
+    for (auto it1 = kptMatches.begin(); it1 != kptMatches.end() - 1; ++it1)
+    { // outer kpt. loop
+
+        // get current keypoint and its matched partner in the prev. frame
+        cv::KeyPoint kpOuterCurr = kptsCurr.at(it1->trainIdx);
+        cv::KeyPoint kpOuterPrev = kptsPrev.at(it1->queryIdx);
+
+        for (auto it2 = kptMatches.begin() + 1; it2 != kptMatches.end(); ++it2)
+        { // inner kpt.-loop
+
+            double minDist = 60.0; // min. required distance
+
+            // get next keypoint and its matched partner in the prev. frame
+            cv::KeyPoint kpInnerCurr = kptsCurr.at(it2->trainIdx);
+            cv::KeyPoint kpInnerPrev = kptsPrev.at(it2->queryIdx);
+
+            // compute distances and distance ratios
+            double distCurr = cv::norm(kpOuterCurr.pt - kpInnerCurr.pt);
+            double distPrev = cv::norm(kpOuterPrev.pt - kpInnerPrev.pt);
+
+            if (distPrev > std::numeric_limits<double>::epsilon() && distCurr >= minDist)
+            { // avoid division by zero
+
+                double distRatio = distCurr / distPrev;
+                distRatios += distRatio;
+                count++;
+                //std::cout << "distRatio " << distRatio << endl;
+            }
+        } // eof inner loop over all matched kpts
+    }     // eof outer loop over all matched kpts
+
+    // only continue if list of distance ratios is not empty
+    if (distRatios == 0)
+    {
+        TTC = NAN;
+        return;
+    }
+
+
+    // STUDENT TASK (replacement for meanDistRatio)
+    
+	distRatios /= count;
+    double dT = 1 / frameRate;
+    TTC = -dT / (1 - distRatios);
 }
 
 
@@ -149,10 +216,58 @@ void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double frameRate, double &TTC)
 {
     // ...
+  double minxprev = 1e9, minxcurr = 1e9;
+  double minlidarx = 0.1;
+  int lanewidth = 4; // assumed lanewidth for the ego vehicle
+  for (auto it = lidarPointsPrev.begin(); it != lidarPointsPrev.end(); it++){
+  	if (abs(it->y) < lanewidth/2 && it->r > 0.01  && it->x > minlidarx ){
+    	minxprev = minxprev < it->x? minxprev : it->x;
+    }
+  }
+  for (auto it = lidarPointsCurr.begin(); it != lidarPointsCurr.end(); it++){
+  	if (abs(it->y) < lanewidth/2 && it->r > 0.01  && it->x > minlidarx ){
+    	minxcurr = minxcurr < it->x? minxcurr : it->x;
+    }
+  }
+  std::cout << "minxprev " << minxprev << std::endl;
+  std::cout << "minxcurr " << minxcurr << std::endl;
+  TTC = minxcurr/((minxprev - minxcurr)*frameRate);
 }
 
 
 void matchBoundingBoxes(std::vector<cv::DMatch> &matches, std::map<int, int> &bbBestMatches, DataFrame &prevFrame, DataFrame &currFrame)
 {
     // ...
+  std::vector<float> prevkeypoint(2);
+  std::vector<float> currkeypoint(2);
+  int prevboxID, currboxID;
+  double descriptordistance{0};
+  for (size_t i = 0; i < matches.size(); i++){
+  	descriptordistance += matches[i].distance;
+  }
+  descriptordistance /= matches.size();
+  for (auto match = matches.begin(); match != matches.end(); match++){
+    if (match->distance <= descriptordistance){
+      prevkeypoint[0] = prevFrame.keypoints[match->queryIdx].pt.x;
+      prevkeypoint[1] = prevFrame.keypoints[match->queryIdx].pt.y;
+      currkeypoint[0] = currFrame.keypoints[match->trainIdx].pt.x;
+      currkeypoint[1] = currFrame.keypoints[match->trainIdx].pt.y;
+      for (auto boundingBox = prevFrame.boundingBoxes.begin(); boundingBox != prevFrame.boundingBoxes.end(); boundingBox++){
+            if (prevkeypoint[0] > boundingBox->roi.x && prevkeypoint[0] < boundingBox->roi.x+boundingBox->roi.width){
+                if (prevkeypoint[1] > boundingBox->roi.y && prevkeypoint[1] < boundingBox->roi.y+boundingBox->roi.height){
+                    prevboxID = boundingBox->boxID;
+                }
+            }
+      }
+      for (auto boundingBox = currFrame.boundingBoxes.begin(); boundingBox != currFrame.boundingBoxes.end(); boundingBox++){
+          if (currkeypoint[0] > boundingBox->roi.x && currkeypoint[0] < boundingBox->roi.x+boundingBox->roi.width){
+              if (currkeypoint[1] > boundingBox->roi.y && currkeypoint[1] < boundingBox->roi.y+boundingBox->roi.height){
+                  currboxID = boundingBox->boxID;
+              }
+          }
+      }
+    }
+    bbBestMatches.insert(std::pair<int,int>(prevboxID,currboxID));
+  }
+  
 }
