@@ -26,21 +26,21 @@ In this final project, you will implement the missing parts in the schematic. To
   * Windows: recommend using [MinGW](http://www.mingw.org/)
 ## Performance Evaluation 1
 * The time to collision gives a negative value when the distance to collision increases in the current frame relative to the previous frame. which can be seen in the below graph.
-<img src="images/ttcLidar_stepsize_1.png" width="414" height="414" />
+<img src="images/ttcLidar_stepsize_1.PNG" width="414" height="414" />
 * there is a sharp increase in the time to collision from the LiDAR data which due to noise in the LiDAR data which can be seen in the below image,
 <img src="images/lidar_1.png" width="779" height="414" />
   and the sharpe increase in the time to collision can be seen in the below graph.
-<img src="images/lidar_1_1.png" width="414" height="414" />
+<img src="images/lidar_1_1.png" width="779" height="414" />
 * there are also some cases where there is no LiDAR data inside the ROI of the frame, which leads to skipping to next frame to obtain the time to collision.
 * For the step size 1, there is sharpe change in the time to collision value due to less change in the data, so increasing the step size give a more reliable output value.
 
 ## Performance Evaluation 2
 * The comparison of detector/descriptor combinations are made with the LiDar data to estimate the time to collision. Below are the graph comparisions.
-<img src="images/ttcLidar_vs_AKAZE" width="414" height="414" />
-<img src="images/ttcLidar_vs_BRISK" width="414" height="414" />
-<img src="images/ttcLidar_vs_FREAK" width="414" height="414" />
-<img src="images/ttcLidar_vs_ORB" width="414" height="414" />
-<img src="images/ttcLidar_vs_SIFT" width="414" height="414" />
+<img src="images/ttcLidar_vs_AKAZE.PNG" width="414" height="414" />
+<img src="images/ttcLidar_vs_BRISK.PNG" width="414" height="414" />
+<img src="images/ttcLidar_vs_FREAK.PNG" width="414" height="414" />
+<img src="images/ttcLidar_vs_ORB.PNG" width="414" height="414" />
+<img src="images/ttcLidar_vs_SIFT.PNG" width="414" height="414" />
 * From the above the graphs, it is clear that the performance of the SIFT detector/descriptor is the best of all.
 * There are cases of descriptor mismatches which leads massive differences between time to collosion computed using LiDAR and camera. This shows that camera is less relaible to perform time to collision.
 
